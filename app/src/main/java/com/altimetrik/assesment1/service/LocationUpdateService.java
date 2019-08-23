@@ -1,5 +1,6 @@
 package com.altimetrik.assesment1.service;
 
+import android.app.Notification;
 import android.app.job.JobParameters;
 import android.app.job.JobService;
 import android.content.Intent;
@@ -48,6 +49,7 @@ public class LocationUpdateService extends JobService implements GoogleLocationC
     @Override
     public void onCreate() {
         Log.i(TAG, "created...............");
+        startForeground(101, new Notification());
 
         locationUpdatesComponent = new GoogleLocationComponent(this,this);
 

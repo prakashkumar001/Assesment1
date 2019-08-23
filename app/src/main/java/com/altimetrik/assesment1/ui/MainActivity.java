@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -12,6 +13,7 @@ import android.os.Messenger;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -56,7 +58,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-       showLocationList=(Button)findViewById(R.id.locationList);
+        showLocationList = (Button) findViewById(R.id.locationList);
         ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map)).getMapAsync(this);
 
 
@@ -65,8 +67,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         showLocationList.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent i=new Intent(MainActivity.this,LocationListActivity.class);
-                startActivityForResult(i,100);
+                Intent i = new Intent(MainActivity.this, LocationListActivity.class);
+                startActivityForResult(i, 100);
             }
         });
 
@@ -116,7 +118,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Intent jobService = new Intent(this, LocationUpdateService.class);
                 Messenger messengerIncoming = new Messenger(mHandler);
                 jobService.putExtra(MESSANGER_FROM_JOB_SERVICE, messengerIncoming);
-                startService(jobService);
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    ContextCompat.startForegroundService(this, jobService);
+                } else {
+                    startService(jobService);
+                }
             } else {
                 // Permission denied.
                 finish();
@@ -153,7 +160,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 case LocationUpdateService.LOCATION_MESSAGE:
                     Location obj = (Location) msg.obj;
                     //Get Location details from Handler
-                    setRealmData(new LocationModel(String.valueOf(obj.getLatitude()),String.valueOf(obj.getLongitude())));
+                    setRealmData(new LocationModel(String.valueOf(obj.getLatitude()), String.valueOf(obj.getLongitude())));
                     break;
             }
         }
@@ -187,14 +194,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if(requestCode==100)
-        {
-            if(resultCode== Activity.RESULT_OK)
-            {
+        if (requestCode == 100) {
+            if (resultCode == Activity.RESULT_OK) {
                 mMap.clear();
 
-                for (LocationDBObject location :getDataFromRealm())
-                {
+                for (LocationDBObject location : getDataFromRealm()) {
                     mLocationOnMap(location);
                 }
 
@@ -203,8 +207,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
-   List<LocationDBObject> getDataFromRealm()
-    {
+    List<LocationDBObject> getDataFromRealm() {
 
         Realm realm = Realm.getDefaultInstance();
         realm.beginTransaction();
@@ -227,8 +230,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
-    void mLocationOnMap(LocationDBObject locationDBObject)
-    {
+    void mLocationOnMap(LocationDBObject locationDBObject) {
         LatLng coordinate = new LatLng(Double.parseDouble(locationDBObject.latitude), Double.parseDouble(locationDBObject.longitude)); //Store these lat lng values somewhere. These should be constant.
         CameraUpdate location = CameraUpdateFactory.newLatLngZoom(
                 coordinate, 15);
@@ -252,12 +254,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             realm.beginTransaction();
         }
 
-        Number currentIdNum =  realm.where(LocationDBObject.class).max("id");
-        int nextId=0;
-         if (currentIdNum == null) {
-           nextId= 1;
+        Number currentIdNum = realm.where(LocationDBObject.class).max("id");
+        int nextId = 0;
+        if (currentIdNum == null) {
+            nextId = 1;
         } else {
-           nextId= currentIdNum.intValue() + 1;
+            nextId = currentIdNum.intValue() + 1;
         }
 
         LocationDBObject locationData = realm.createObject(LocationDBObject.class, nextId);
